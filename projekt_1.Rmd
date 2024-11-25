@@ -1,0 +1,80 @@
+---
+title: "projekt_zed"
+author: "Andrzej Gauza"
+date: "2024-11-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Podsumowanie analizy
+**TODO**
+
+# Biblioteki
+``` {r}
+library(dplyr)
+```
+
+# Wczytanie danych
+``` {r}
+data <- read.csv("mp_batteries.csv")
+
+columns <- names(data)
+numeric_columns <- c("Max.Delta.Volume",
+"Average.Voltage",
+"Gravimetric.Capacity",
+"Volumetric.Capacity",
+"Gravimetric.Energy",
+"Volumetric.Energy",
+"Atomic.Fraction.Charge",
+"Atomic.Fraction.Discharge",
+"Stability.Charge",
+"Stability.Discharge",
+"Steps",
+"Max.Voltage.Step")
+text_columns <- setdiff(columns, numeric_columns)
+print(numeric_columns)
+print(text_columns)
+```
+
+# Podstawowe statystyki
+```{r}
+nrow(data)
+summary(data)
+```
+
+# Korelacja
+```{r}
+numeric_df <- data[, numeric_columns]
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(numeric_df)
+
+# Convert the matrix to a data frame for saving
+correlation_df <- as.data.frame(as.table(correlation_matrix))
+
+# Rename the columns for clarity
+names(correlation_df) <- c("Variable1", "Variable2", "Correlation")
+
+correlation_df <- correlation_df[as.character(correlation_df$Variable1) < as.character(correlation_df$Variable2), ]
+```
+
+Korelacja wszytskich par zmiennych numerycznych
+```{r}
+print(correlation_df[order(-abs(correlation_df$Correlation)), ])
+```
+Przedstawienie korelacji dla 5 par zmiennych o najwyższej korelacji
+```{r}
+top_5_correlation <- correlation_df[order(-abs(correlation_df$Correlation)), ] %>%
+  slice(1:1)
+print(top_5_correlation)
+for (pair in top_5_correlation)
+{
+  print(pair)
+}
+#ggplot2()
+```
+
+
