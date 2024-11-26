@@ -23,8 +23,8 @@ library(ggplot2)
 data <- read.csv("mp_batteries.csv")
 
 columns <- names(data)
-string_columns <- c("Battery.ID", "Battery.Formula", "Working.Ion", "Formula.Charge", "Formula.Discharge")
-numeric_columns <- setdiff(columns, string_columns)
+string_columns <- c("Battery.Formula", "Working.Ion", "Formula.Charge", "Formula.Discharge")
+numeric_columns <- setdiff(columns, c(string_columns, "Battery.ID"))
 print(numeric_columns)
 print(string_columns)
 ```
@@ -38,30 +38,29 @@ summary(data)
 # Analiza wartości atrybutów
 ### Atrybuty tekstowe
 ```{r}
-text_cols <- data.frame()
+counts <- data.frame()
 for (col in string_columns)
 {
-  counts <- data %>%
+  col_counts <- data %>%
     count(get(col), name = "Count") %>%
     arrange(desc(Count))
+  col_counts$var <- col
+  counts <- rbind(counts, col_counts)
   
-  top_10_counts <- counts %>%
+  top_10_counts <- col_counts %>%
     slice(1:10)
   print(top_10_counts)
 }
 
-print(text_cols)
-```
-
-```{r}
-  #ggplot(counts, aes(x = Count)) +
-  #  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
-  #  labs(
-  #    title = paste("Rozkład częstości występowania wartości dla zmiennej ", col),
-  #    x = "Liczba wystąpień",
-  #    y = "Liczba różnych wartości"
-  #  ) +
-  #  theme_minimal()
+ggplot(counts, aes(x = Count)) +
+geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+labs(
+  title = paste("Liczba wystąpień wartości dla zmiennej"),
+  x = "Liczba wystąpień",
+  y = "Liczba różnych wartości"
+) +
+facet_wrap(~var, scales="free") +
+theme_minimal()
 ```
 
 # Korelacja
