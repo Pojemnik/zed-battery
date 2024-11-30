@@ -18,11 +18,12 @@ knitr::opts_chunk$set(echo = TRUE)
 **TODO**
 
 # Biblioteki
-``` {r}
+``` {r, warning=FALSE, message=FALSE}
 library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(plotly)
+library(knitr)
 ```
 
 # Wczytanie danych
@@ -35,28 +36,37 @@ numeric_columns <- setdiff(columns, c(string_columns, "Battery.ID"))
 ```
 
 # Podstawowe statystyki
+Liczba wierszy: `r nrow(data)`.
+
+Podsumowanie:
 ```{r}
-nrow(data)
-summary(data)
+knitr::kable(summary(data))
 ```
 
 # Analiza wartości atrybutów
 ## Atrybuty tekstowe
-```{r}
+10 naliczniej występujących wartości dla każdego atrybutu tekstowego
+```{r results='asis'}
 counts <- data.frame()
 for (col in string_columns)
 {
   col_counts <- data %>%
     count(get(col), name = "Count") %>%
+    rename(Value = "get(col)") %>%
     arrange(desc(Count))
   col_counts$var <- col
   counts <- rbind(counts, col_counts)
   
   top_10_counts <- col_counts %>%
+    select(c("Value", "Count")) %>%
     slice(1:10)
-  print(top_10_counts)
+  print(knitr::kable(top_10_counts, caption = paste("10 najliczniej występujących wartości zmiennej", col)))
+  cat("\n")
 }
+```
 
+
+```{r}
 ggplot(counts, aes(x = Count)) +
 geom_histogram(binwidth = 1, fill = "green", alpha = 0.7) +
 labs(
@@ -69,7 +79,19 @@ theme_minimal()
 ```
 
 ## Atrybuty liczbowe
-```{r, fig.width=12, fig.height=12}
+Wartości puste:
+```{r, results='asis'}
+nan_counts <- sapply(numeric_columns, function(col) sum(is.nan(data[[col]])))
+
+nan_counts_df <- data.frame(
+  nan = nan_counts
+)
+
+print(knitr::kable(nan_counts_df))
+```
+
+Rozkłady wartości:
+```{r, fig.width=12, fig.height=12, warning=FALSE, message=FALSE}
 numeric_df <- data[, numeric_columns]
 numeric_df_long <- numeric_df %>%
   pivot_longer(colnames(numeric_df)) %>% 
@@ -85,13 +107,8 @@ ggplot(numeric_df_long, aes(x = value)) +
 ```{r}
 numeric_df <- data[, numeric_columns]
 
-# Calculate the correlation matrix
 correlation_matrix <- cor(numeric_df)
-
-# Convert the matrix to a data frame for saving
 correlation_df <- as.data.frame(as.table(correlation_matrix))
-
-# Rename the columns for clarity
 names(correlation_df) <- c("x", "y", "cor")
 
 correlation_df_one_dir <- correlation_df[as.character(correlation_df$x) < as.character(correlation_df$y), ]
@@ -99,10 +116,10 @@ correlation_df_one_dir <- correlation_df[as.character(correlation_df$x) < as.cha
 
 Korelacja wszytskich par zmiennych numerycznych
 ```{r}
-print(correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ])
+knitr::kable(correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ])
 ```
 
-```{r}
+```{r, warning=FALSE}
 p <- ggplot(correlation_df) +
   geom_tile(aes(x = x, y = y, fill = abs(cor), text = paste("Korelacja pomiędzy", x, "i", y, "=", abs(cor)))) +
   theme(axis.title = element_blank()) +
@@ -123,11 +140,11 @@ ggplotly(p, tooltip = "text") %>%
 ```
 
 Przedstawienie zależności 5 par zmiennych o najwyższej korelacji
-```{r}
+```{r, warning=FALSE, message=FALSE}
 top_5_correlation <- correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ] %>%
   slice(1:5)
 
-print(top_5_correlation)
+knitr::kable(top_5_correlation)
 
 ggplotly(
   ggplot(data, aes(x = Gravimetric.Energy, y = Volumetric.Energy)) +
