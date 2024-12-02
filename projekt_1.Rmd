@@ -45,10 +45,10 @@ knitr::kable(summary(data))
 
 # Analiza wartości atrybutów
 ## Atrybuty tekstowe
-10 naliczniej występujących wartości dla każdego atrybutu tekstowego
+### 10 naliczniej występujących wartości dla każdego atrybutu tekstowego
 ```{r results='asis'}
 counts <- data.frame()
-for (col in string_columns)
+for (col in c(string_columns, "Battery.ID"))
 {
   col_counts <- data %>%
     count(get(col), name = "Count") %>%
@@ -65,8 +65,8 @@ for (col in string_columns)
 }
 ```
 
-
-```{r}
+### Liczba wystąpień wartości
+```{r, fig.width=12, fig.height=8}
 ggplot(counts, aes(x = Count)) +
 geom_histogram(binwidth = 1, fill = "green", alpha = 0.7) +
 labs(
@@ -77,6 +77,9 @@ labs(
 facet_wrap(~var, scales="free") +
 theme_minimal()
 ```
+
+### Wnioski
+Battery.ID to idenryfikator baterii. Jest on unikalny w zbiorze. Zmienne Battery.Formula, Formula.Charge i Formula.Discharge cechują się dużą liczbą różnych wartości. Oznacza to że testowane jest wiele różnych możliwych subastancji, które mogą zostać użyte do produkcji baterii. Inaczej jest w przypadku zmiennej Working.Ion. Ponad połowa materiałów jako głównego jonu używa litu. Wydaje się to być dominujący trend w badaniach nad bateriami.
 
 ## Atrybuty liczbowe
 Wartości puste:
@@ -91,7 +94,7 @@ print(knitr::kable(nan_counts_df))
 ```
 
 Rozkłady wartości:
-```{r, fig.width=12, fig.height=12, warning=FALSE, message=FALSE}
+```{r, fig.width=12, fig.height=9, warning=FALSE, message=FALSE}
 numeric_df <- data[, numeric_columns]
 numeric_df_long <- numeric_df %>%
   pivot_longer(colnames(numeric_df)) %>% 
