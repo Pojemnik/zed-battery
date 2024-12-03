@@ -24,6 +24,8 @@ library(ggplot2)
 library(tidyr)
 library(plotly)
 library(knitr)
+library(caret)
+library(randomForest)
 ```
 
 # Wczytanie danych
@@ -40,7 +42,7 @@ Liczba wierszy: `r nrow(data)`.
 
 Podsumowanie:
 ```{r}
-knitr::kable(summary(data))
+kable(summary(data))
 ```
 
 # Analiza wartości atrybutów
@@ -60,7 +62,7 @@ for (col in c(string_columns, "Battery.ID"))
   top_10_counts <- col_counts %>%
     select(c("Value", "Count")) %>%
     slice(1:10)
-  print(knitr::kable(top_10_counts, caption = paste("10 najliczniej występujących wartości zmiennej", col)))
+  print(kable(top_10_counts, caption = paste("10 najliczniej występujących wartości zmiennej", col)))
   cat("\n")
 }
 ```
@@ -82,7 +84,7 @@ theme_minimal()
 Battery.ID to idenryfikator baterii. Jest on unikalny w zbiorze. Zmienne Battery.Formula, Formula.Charge i Formula.Discharge cechują się dużą liczbą różnych wartości. Oznacza to że testowane jest wiele różnych możliwych subastancji, które mogą zostać użyte do produkcji baterii. Inaczej jest w przypadku zmiennej Working.Ion. Ponad połowa materiałów jako głównego jonu używa litu. Wydaje się to być dominujący trend w badaniach nad bateriami.
 
 ## Atrybuty liczbowe
-Wartości puste:
+### Wartości puste
 ```{r, results='asis'}
 nan_counts <- sapply(numeric_columns, function(col) sum(is.nan(data[[col]])))
 
@@ -90,10 +92,10 @@ nan_counts_df <- data.frame(
   nan = nan_counts
 )
 
-print(knitr::kable(nan_counts_df))
+print(kable(nan_counts_df))
 ```
 
-Rozkłady wartości:
+### Rozkłady wartości
 ```{r, fig.width=12, fig.height=9, warning=FALSE, message=FALSE}
 numeric_df <- data[, numeric_columns]
 numeric_df_long <- numeric_df %>%
@@ -106,6 +108,9 @@ ggplot(numeric_df_long, aes(x = value)) +
   theme_minimal()
 ```
 
+### Wnioski
+W zbiorze danych nie brakuje żadnych wartości. Rozkłady większości zmiennych mają wyraźnie zaznaczony najczęściej występujący przedział wartości. Z reguły jest on dość wąski w stosunku do całej dziedziny.
+
 # Korelacja
 ```{r}
 numeric_df <- data[, numeric_columns]
@@ -117,9 +122,9 @@ names(correlation_df) <- c("x", "y", "cor")
 correlation_df_one_dir <- correlation_df[as.character(correlation_df$x) < as.character(correlation_df$y), ]
 ```
 
-Korelacja wszytskich par zmiennych numerycznych
+## Korelacja wszytskich par zmiennych numerycznych
 ```{r}
-knitr::kable(correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ])
+kable(correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ])
 ```
 
 ```{r, warning=FALSE}
@@ -142,12 +147,12 @@ ggplotly(p, tooltip = "text") %>%
   )
 ```
 
-Przedstawienie zależności 5 par zmiennych o najwyższej korelacji
+## Przedstawienie zależności 5 par zmiennych o najwyższej korelacji
 ```{r, warning=FALSE, message=FALSE}
 top_5_correlation <- correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ] %>%
   slice(1:5)
 
-knitr::kable(top_5_correlation)
+kable(top_5_correlation)
 
 ggplotly(
   ggplot(data, aes(x = Gravimetric.Energy, y = Volumetric.Energy)) +
@@ -234,6 +239,88 @@ ggplot(data, aes(x = Average.Voltage, y = Gravimetric.Energy)) +
 )
 ```
 
-# Najważniejsze trendy w badaniu
+
+## Wnioski
+Wysoka korelacja zmiennych Gravimetric.Energy i Volumetric.Energy, oraz Gravimetric.Capacity i Volumetric.Capacity wydaje się logiczna, ponieważ te pary zmiennych powiązane są z gęstością enegrii i pojemności baterii. Dla pary Stability.Charge i Stability.Discharge, wynik również jest zgodny z oczekiwaniami. Stabilość substancji w jednym stanie może być związana z jej stabilością w innym. Dwie pozostałe pary zmiennych o wysokiej korelacji (dla których ta korelacja jest już znacznie niższa) wydają się bardziej interesujące z punktu widzenia badań nad nowymi materiałami.
+
+# Najważniejsze trendy
+Najważniejszym trendem w badaniach nad bateriami wydaje się być zastosowanie litu jako głównego jonu odpowiadającego za transport ładunku. Innymi pierwiastaki często stosowanymi w tym celu są wapń i magnez, natomiast jest to znacznie rzadsze.
+
+``` {r}
+print(sum(grepl("O", data$Formula.Charge, ignore.case = FALSE)))
+print(sum(grepl("O", data$Formula.Discharge, ignore.case = FALSE)))
+```
+Innym pierwiastkiem często używanym w materiałach do produkcji baterii jest tlen. 3848 materiałów ze zbioru zawiera go w stanie naładowanym i rozładowanym.
+
+Ważnym celem w badaniach nad bateriami jest zwiększanie pojemości oraz gęstości energii. Na bazie uzyskanych wartości korelacji pomiędzy zmiennymi wydaje się że badania nad zwiększeniem udziału atomowego składników w stanie rozładowanym mogą mieć pozytywne skutki dla pojemności, a nad średnim napięciem dla energii.
 
 # Predykcja dalszych cech
+## Przygotowanie regreora
+W celu predykcji wartości Volumetric.Capacity nowych materiałów zastosowano regresor wykorzystujący algorytm Random Forest. Z danych uczących usunięto kolumny tekstowe z wyjątkiem Working.Ion, z uwagi na ich niską informatywność dla regresora - bardzo dużo liczba wartości kategorycznych. Usnięto również zmienną Gravimetric.Capacity - wysoka korelacja z Volumetric.Capacity sprawia że predykcja na jej bazie jest pozbawiona sensu.
+``` {r}
+regression_columns <- setdiff(columns, c("Battery.Formula", "Formula.Charge", "Formula.Discharge", "Battery.ID", "Gravimetric.Capacity"))
+source <- data[regression_columns]
+
+idx <- createDataPartition(y = source$Volumetric.Capacity, p = 0.7, list = FALSE)
+train <- source[idx,]
+test <- source[-idx,]
+
+ctrl <- trainControl(method = "repeatedcv",
+                      number = 2, repeats = 5)
+
+fit <- train(Volumetric.Capacity ~ .,
+             data = train,
+             method = "rf",
+             trControl = ctrl,
+             importance = TRUE,
+             ntree = 10)
+rfClasses <- predict(fit, newdata = test)
+```
+
+## Wyniki uczenia
+``` {r}
+kable(fit$results, caption="Tabela wyników z podzbioru uczącego")
+
+res_pred <- postResample(pred = rfClasses, obs = test$Volumetric.Capacity)
+kable(res_pred[1:2])
+```
+
+``` {r}
+ggplotly(
+  ggplot() + 
+    geom_histogram(
+      aes(x = abs(test$Volumetric.Capacity - rfClasses)),
+      binwidth = 5,
+      fill = "green",
+      alpha = 0.7
+    ) +
+    labs(
+      title = paste("Rozkład błędu predykcji wartości Volumetric.Capacity"),
+      x = "Wartość bezwzględna błędu",
+      y = "Liczba przypadków"
+    ) +
+    theme_minimal()
+)
+```
+
+## Predykcja cech nowych materiałów
+Predykcję wartości Volumetric.Capacity dla nowych baterii przeprowadzono na trzech przykładach. Zostały one przestawaione w poniższej tabeli:
+``` {r}
+new_materials <- data.frame(
+  Working.Ion = c("Li", "Li", "Ca"),
+  Max.Delta.Volume = c(3, 0.1, 0.5),
+  Average.Voltage = c(0.1, -0.2, 0.4),
+  Gravimetric.Energy = c(200, 50, 100),
+  Volumetric.Energy = c(600, 150, 300),
+  Atomic.Fraction.Charge = c(0, 0, 0.5),
+  Atomic.Fraction.Discharge = c(0.75, 0.8, 0.9),
+  Stability.Charge = c(0, 0.1, 0.05),
+  Stability.Discharge = c(0.01, 0.05, 0.1),
+  Steps = c(1, 1, 1),
+  Max.Voltage.Step = c(0, 0, 0)
+)
+
+predicted <- predict(fit, newdata = new_materials)
+new_materials$Predicted.Volumetric.Capacity = predicted
+kable(new_materials)
+```
