@@ -1,5 +1,5 @@
 ---
-title: "projekt_zed"
+title: "Programowanie w R: Projekt"
 author: "Andrzej Gauza"
 date: "`r Sys.Date()`"
 output: 
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Podsumowanie analizy
-
+Dane o materiałach stosowanych do produkcji baterii pozwalają na uzyskanie interesujących wniosków. Wartości udziału atomowego składników w stanie rozładowanym i pojemności grawimetrycznej, a także średniego napięcia dla poszczególnego kroku napięcia i gęstości energii w odniesieniu do masy baterii wykazują stsunkowo dużą korelacje, co może być interesującym kierunkiem dla nowych badań. Wsród najważniejszych trendów w badaniach nad bateriami można wyróżnić zastosowanie jako głównego jonu odpowiadającego za transport ładunku litu, rzadziej wapnia lub magnezu. Częste jest również używanie w materiałach tlenu. Zbiór danych pozwala na skuteczną predykcję parametrów nowych materiałów z wykorzystaniem technik uczenia maszynowego.
 
 # Biblioteki
 ``` {r, warning=FALSE, message=FALSE}
