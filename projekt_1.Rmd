@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Podsumowanie analizy
-**TODO**
+
 
 # Biblioteki
 ``` {r, warning=FALSE, message=FALSE}
@@ -48,7 +48,7 @@ kable(summary(data))
 # Analiza wartości atrybutów
 ## Atrybuty tekstowe
 ### 10 naliczniej występujących wartości dla każdego atrybutu tekstowego
-```{r results='asis'}
+```{r results='asis', echo=FALSE}
 counts <- data.frame()
 for (col in c(string_columns, "Battery.ID"))
 {
@@ -68,7 +68,7 @@ for (col in c(string_columns, "Battery.ID"))
 ```
 
 ### Liczba wystąpień wartości
-```{r, fig.width=12, fig.height=8}
+```{r, fig.width=12, fig.height=8, echo=FALSE}
 ggplot(counts, aes(x = Count)) +
 geom_histogram(binwidth = 1, fill = "green", alpha = 0.7) +
 labs(
@@ -96,7 +96,7 @@ print(kable(nan_counts_df))
 ```
 
 ### Rozkłady wartości
-```{r, fig.width=12, fig.height=9, warning=FALSE, message=FALSE}
+```{r, fig.width=12, fig.height=9, warning=FALSE, message=FALSE, echo=FALSE}
 numeric_df <- data[, numeric_columns]
 numeric_df_long <- numeric_df %>%
   pivot_longer(colnames(numeric_df)) %>% 
@@ -120,14 +120,16 @@ correlation_df <- as.data.frame(as.table(correlation_matrix))
 names(correlation_df) <- c("x", "y", "cor")
 
 correlation_df_one_dir <- correlation_df[as.character(correlation_df$x) < as.character(correlation_df$y), ]
+correlation_df_sorted <- correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ] %>%
+  slice(1:length(correlation_df_one_dir$cor))
 ```
 
 ## Korelacja wszytskich par zmiennych numerycznych
 ```{r}
-kable(correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ])
+kable(correlation_df_sorted)
 ```
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, echo=FALSE}
 p <- ggplot(correlation_df) +
   geom_tile(aes(x = x, y = y, fill = abs(cor), text = paste("Korelacja pomiędzy", x, "i", y, "=", abs(cor)))) +
   theme(axis.title = element_blank()) +
@@ -148,8 +150,8 @@ ggplotly(p, tooltip = "text") %>%
 ```
 
 ## Przedstawienie zależności 5 par zmiennych o najwyższej korelacji
-```{r, warning=FALSE, message=FALSE}
-top_5_correlation <- correlation_df_one_dir[order(-abs(correlation_df_one_dir$cor)), ] %>%
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+top_5_correlation <- correlation_df_sorted %>%
   slice(1:5)
 
 kable(top_5_correlation)
@@ -257,6 +259,7 @@ Ważnym celem w badaniach nad bateriami jest zwiększanie pojemości oraz gęsto
 # Predykcja dalszych cech
 ## Przygotowanie regreora
 W celu predykcji wartości Volumetric.Capacity nowych materiałów zastosowano regresor wykorzystujący algorytm Random Forest. Z danych uczących usunięto kolumny tekstowe z wyjątkiem Working.Ion, z uwagi na ich niską informatywność dla regresora - bardzo dużo liczba wartości kategorycznych. Usnięto również zmienną Gravimetric.Capacity - wysoka korelacja z Volumetric.Capacity sprawia że predykcja na jej bazie jest pozbawiona sensu.
+
 ``` {r}
 regression_columns <- setdiff(columns, c("Battery.Formula", "Formula.Charge", "Formula.Discharge", "Battery.ID", "Gravimetric.Capacity"))
 source <- data[regression_columns]
@@ -285,7 +288,7 @@ res_pred <- postResample(pred = rfClasses, obs = test$Volumetric.Capacity)
 kable(res_pred[1:2])
 ```
 
-``` {r}
+``` {r, echo=FALSE}
 ggplotly(
   ggplot() + 
     geom_histogram(
