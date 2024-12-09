@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Podsumowanie analizy
-Dane o materiałach stosowanych do produkcji baterii pozwalają na uzyskanie interesujących wniosków. Wartości udziału atomowego składników w stanie rozładowanym i pojemności grawimetrycznej, a także średniego napięcia dla poszczególnego kroku napięcia i gęstości energii w odniesieniu do masy baterii wykazują stsunkowo dużą korelacje, co może być interesującym kierunkiem dla nowych badań. Wsród najważniejszych trendów w badaniach nad bateriami można wyróżnić zastosowanie jako głównego jonu odpowiadającego za transport ładunku litu, rzadziej wapnia lub magnezu. Częste jest również używanie w materiałach tlenu. Zbiór danych pozwala na skuteczną predykcję parametrów nowych materiałów z wykorzystaniem technik uczenia maszynowego.
+Dane o materiałach stosowanych do produkcji baterii pozwalają na uzyskanie interesujących wniosków. Wartości udziału atomowego składników w stanie rozładowanym i pojemności grawimetrycznej, a także średniego napięcia dla poszczególnego kroku napięcia i gęstości energii w odniesieniu do masy baterii wykazują stosunkowo dużą korelacje, co może być interesującym kierunkiem dla nowych badań. Wsród najważniejszych trendów w badaniach nad bateriami można wyróżnić zastosowanie jako głównego jonu odpowiadającego za transport ładunku litu, rzadziej wapnia lub magnezu. Częste jest również używanie w materiałach tlenu. Zbiór danych pozwala na skuteczną predykcję parametrów nowych materiałów z wykorzystaniem technik uczenia maszynowego.
 
 # Biblioteki
 ``` {r, warning=FALSE, message=FALSE}
@@ -259,6 +259,8 @@ Ważnym celem w badaniach nad bateriami jest zwiększanie pojemości oraz gęsto
 # Predykcja dalszych cech
 ## Przygotowanie regreora
 W celu predykcji wartości Volumetric.Capacity nowych materiałów zastosowano regresor wykorzystujący algorytm Random Forest. Z danych uczących usunięto kolumny tekstowe z wyjątkiem Working.Ion, z uwagi na ich niską informatywność dla regresora - bardzo dużo liczba wartości kategorycznych. Usnięto również zmienną Gravimetric.Capacity - wysoka korelacja z Volumetric.Capacity sprawia że predykcja na jej bazie jest pozbawiona sensu.
+
+Dane zostały podzielone na zbiór treningowy i testowy. Zbiór treningowy stanowi 70% całości zbioru. Do próbkowania zbioru danych użyto metody k-krotnej walidacji krzyżowej.
 
 ``` {r}
 regression_columns <- setdiff(columns, c("Battery.Formula", "Formula.Charge", "Formula.Discharge", "Battery.ID", "Gravimetric.Capacity"))
